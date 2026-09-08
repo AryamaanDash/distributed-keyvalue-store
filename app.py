@@ -96,3 +96,40 @@ def put_data(key):
                     "mode": "AP",
                     "replication": replication_results,
                 })
+
+# In CP mode, the node contacts every peer and waits for confirmation before saving locally.
+# If any peer is unreachable, the write is rejected with a 503 error
+# Consistency is protected, but availability is sacrificed.
+
+# In AP mode, the node saves locally first, then tries to replicate.
+# If a peer is unreachable, the write still succeeds.
+# Availability is preserved, but the nodes can end up with different data.
+
+# Adding replication endpoint, mode-switching endpoints, and main block
+
+@app.route("/replicate", methods=["POST"])
+def replicate():
+    key = request.json.get("key")
+    value = request.json.get("value")
+    store[key] = value
+    return jsonify({"status": "ok", "node": NODE_NAME})
+
+@app.route("/mode", methods=["GET"])
+def get_mode():
+    return jsonify({"status": "ok", "node": NODE_NAME})
+
+@app.route("/mode", methods = ["POST"])
+def set_mode():
+    global MODE
+    new_mode = request.json.get("mode", "").upper()
+    if new_mode in ("CP", "AP"):
+        MODE = new_mode
+        return jsonify({"status": "ok", "node": NODE_NAME, "mode": MODE})
+    return jsonify({"error": "Mode must be CP or AP"}), 400
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
+
+#/replicate is the endpoint that peers call to push data to this node. It accepts anything and saves to local store
+#/mode lets you switch a running node between CP and AP mode on the fly using a POST request. The main block starts the Flask server.
