@@ -43,23 +43,23 @@ def put_data(key):
     value = request.json.get("value")
 
     if MODE == "CP":
-        # CP Mode: Replicate to all peers before confirming
+        # CP Mode: Replicate to ALL peers before confirming
         for peer in PEERS:
             try:
                 resp = http_requests.post(
                     f"http://{peer}/replicate",
                     json={"key": key, "value": value},
-                    timeout = 2,
+                    timeout=2,
                 )
                 if resp.status_code != 200:
                     return jsonify({
                         "error": f"Replication to {peer} failed",
-                        "reason": "Write rejected to maintain consistence (CP mode)",
+                        "reason": "Write rejected to maintain consistency (CP mode)",
                     }), 503
             except http_requests.exceptions.RequestException:
                 return jsonify({
                     "error": f"Cannot reach {peer}",
-                    "reason": "Write rejected to maintain consistency (CP Mode)",
+                    "reason": "Write rejected to maintain consistency (CP mode)",
                 }), 503
 
         # All peers confirmed, write locally
@@ -74,6 +74,7 @@ def put_data(key):
         })
 
     else:
+        # AP Mode: Write locally first, replicate best-effort
         store[key] = value
 
         replication_results = []
@@ -82,20 +83,20 @@ def put_data(key):
                 http_requests.post(
                     f"http://{peer}/replicate",
                     json={"key": key, "value": value},
-                    timeout = 1
+                    timeout=1,
                 )
                 replication_results.append({"peer": peer, "status": "replicated"})
             except http_requests.exceptions.RequestException:
                 replication_results.append({"peer": peer, "status": "unreachable"})
 
-                return jsonify({
-                    "status": "ok",
-                    "node": NODE_NAME,
-                    "key": key,
-                    "value": value,
-                    "mode": "AP",
-                    "replication": replication_results,
-                })
+        return jsonify({
+            "status": "ok",
+            "node": NODE_NAME,
+            "key": key,
+            "value": value,
+            "mode": "AP",
+            "replication": replication_results,
+        })
 
 # In CP mode, the node contacts every peer and waits for confirmation before saving locally.
 # If any peer is unreachable, the write is rejected with a 503 error
@@ -116,9 +117,10 @@ def replicate():
 
 @app.route("/mode", methods=["GET"])
 def get_mode():
-    return jsonify({"status": "ok", "node": NODE_NAME})
+    return jsonify({"node": NODE_NAME, "mode": MODE})
 
-@app.route("/mode", methods = ["POST"])
+
+@app.route("/mode", methods=["POST"])
 def set_mode():
     global MODE
     new_mode = request.json.get("mode", "").upper()
