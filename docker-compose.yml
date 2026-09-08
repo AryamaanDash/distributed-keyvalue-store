@@ -1,6 +1,6 @@
 services:
   node1:
-    build:
+    build: .
     container_name: node1
     ports:
       - "5001:5000"
@@ -12,7 +12,7 @@ services:
       - capnet
 
   node2:
-    build:
+    build: .
     container_name: node2
     ports:
       - "5002:5000"
@@ -24,7 +24,7 @@ services:
       - capnet
 
   node3:
-    build:
+    build: .
     container_name: node3
     ports:
       - "5003:5000"
