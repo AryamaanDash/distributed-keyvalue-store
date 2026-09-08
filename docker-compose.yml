@@ -1,0 +1,46 @@
+services:
+  node1:
+    build:
+    container_name: node1
+    ports:
+      - "5001:5000"
+    environment:
+      - NODE_NAME=node1
+      - PEERS=node2:5000,node3:5000
+      - MODE=CP
+    networks:
+      - capnet
+
+  node2:
+    build:
+    container_name: node2
+    ports:
+      - "5002:5000"
+    environment:
+      - NODE_NAME=node2
+      - PEERS=node1:5000,node3:5000
+      - MODE=CP
+    networks:
+      - capnet
+
+  node3:
+    build:
+    container_name: node3
+    ports:
+      - "5003:5000"
+    environment:
+      - NODE_NAME=node3
+      - PEERS=node1:5000,node2:5000
+      - MODE=CP
+    networks:
+      - capnet
+
+networks:
+  capnet:
+    name: capnet
+    driver: bridge
+
+# each service (node1, node2, node3) builds from same dockerfile but gets its own NODE_NAME and list of PEERS. 5001, 5002, 5003 map to port 5000 inside each container
+
+# capnet network gives all 3 nodes a private network where they can reach each otehr by container name.
+  
